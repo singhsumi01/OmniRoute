@@ -63,7 +63,13 @@ export function hasValidContent(msg: ClaudeMessage): boolean {
       (block) =>
         (block.type === "text" && block.text?.trim()) ||
         block.type === "tool_use" ||
-        block.type === "tool_result"
+        block.type === "tool_result" ||
+        // #2475 (native Claude passthrough): image/document-only user messages are
+        // valid content and must not be dropped by prepareClaudeRequest's empty-message
+        // filter — otherwise an attachment-only turn is silently lost on the claude->claude
+        // path (e.g. the ollama-cloud /v1/messages transport). Port of decolua/9router#2475.
+        block.type === "image" ||
+        block.type === "document"
     );
   }
   return false;

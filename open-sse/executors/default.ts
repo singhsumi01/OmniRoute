@@ -11,6 +11,7 @@ import { getGigachatAccessToken } from "../services/gigachatAuth.ts";
 import { getRegistryEntry } from "../config/providerRegistry.ts";
 import { getModelTargetFormat } from "../config/providerModels.ts";
 import {
+  ANTHROPIC_VERSION_HEADER,
   mergeClientAnthropicBeta,
   normalizeAnthropicHeaderVariants,
 } from "../config/anthropicHeaders.ts";
@@ -110,6 +111,18 @@ export class DefaultExecutor extends BaseExecutor {
     void model;
     void stream;
     void urlIndex;
+    // Ollama Cloud native Claude passthrough (port of decolua/9router#2475): a Claude-format
+    // client resolved targetFormat="claude" (see resolveChatCoreTargetFormat +
+    // resolveExecutionCredentials, which stamp the marker below) routes straight to the
+    // registry's `claudeBaseUrl` instead of the default openai-format bridge endpoint. Narrow,
+    // single-provider check — not a generic transport-selection framework.
+    if (
+      this.provider === "ollama-cloud" &&
+      credentials?.providerSpecificData?._omnirouteOllamaClaudeUpstream === true &&
+      this.config.claudeBaseUrl
+    ) {
+      return this.config.claudeBaseUrl;
+    }
     if (this.provider?.startsWith?.("openai-compatible-")) {
       const psd = credentials?.providerSpecificData;
       const baseUrl = psd?.baseUrl || "https://api.openai.com/v1";
@@ -436,6 +449,18 @@ export class DefaultExecutor extends BaseExecutor {
             }
           }
         }
+    }
+
+    // Ollama Cloud native Claude passthrough (port of decolua/9router#2475): the switch above
+    // already set the correct Authorization: Bearer header for ollama-cloud (falls to the
+    // `default:` branch, registry authHeader="bearer" — identical scheme on both the
+    // openai-format and native-claude endpoints). Only the Claude-format-specific
+    // Anthropic-Version header needs adding when routed to the native /v1/messages transport.
+    if (
+      this.provider === "ollama-cloud" &&
+      credentials?.providerSpecificData?._omnirouteOllamaClaudeUpstream === true
+    ) {
+      headers["Anthropic-Version"] = ANTHROPIC_VERSION_HEADER;
     }
 
     headers["Accept"] = stream ? "text/event-stream" : "application/json";

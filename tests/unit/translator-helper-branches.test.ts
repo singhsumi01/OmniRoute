@@ -260,6 +260,18 @@ test("claudeHelper validates content, ordering and request preparation branches"
   assert.equal(claudeHelper.hasValidContent({ content: " hello " }), true);
   assert.equal(claudeHelper.hasValidContent({ content: [{ type: "tool_use", id: "call" }] }), true);
   assert.equal(claudeHelper.hasValidContent({ content: [{ type: "text", text: "   " }] }), false);
+  // #2475: image/document-only messages are valid content (native Claude passthrough) and must
+  // not be dropped as empty by prepareClaudeRequest's filter.
+  assert.equal(
+    claudeHelper.hasValidContent({
+      content: [{ type: "image", source: { type: "base64", media_type: "image/png", data: "x" } }],
+    }),
+    true
+  );
+  assert.equal(
+    claudeHelper.hasValidContent({ content: [{ type: "document", source: { type: "url", url: "u" } }] }),
+    true
+  );
 
   assert.deepEqual(claudeHelper.fixToolUseOrdering([{ role: "user", content: "single" }]), [
     { role: "user", content: "single" },

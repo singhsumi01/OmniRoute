@@ -700,6 +700,7 @@ export async function handleChatCore({
     apiFormat,
     customModelTargetFormat,
     providerSpecificData: credentials?.providerSpecificData,
+    sourceFormat,
   });
 
   const initialProviderRequest =

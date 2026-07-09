@@ -96,3 +96,36 @@ test("missing providerSpecificData defaults to an empty object", () => {
   }) as Record<string, unknown>;
   assert.deepEqual(out.providerSpecificData, {});
 });
+
+// Port of decolua/9router#2475: ollama-cloud + targetFormat="claude" stamps the marker read by
+// DefaultExecutor.buildUrl/buildHeaders to route to the registry's native claudeBaseUrl instead of
+// the openai bridge.
+test("ollama-cloud + claude target stamps the native-claude-upstream marker", () => {
+  const out = resolveExecutionCredentials({
+    ...base,
+    provider: "ollama-cloud",
+    targetFormat: "claude",
+  }) as Record<string, unknown>;
+  const psd = out.providerSpecificData as Record<string, unknown>;
+  assert.equal(psd._omnirouteOllamaClaudeUpstream, true);
+});
+
+test("ollama-cloud + openai target never gets the native-claude-upstream marker", () => {
+  const out = resolveExecutionCredentials({
+    ...base,
+    provider: "ollama-cloud",
+    targetFormat: "openai",
+  }) as Record<string, unknown>;
+  const psd = out.providerSpecificData as Record<string, unknown>;
+  assert.equal(psd._omnirouteOllamaClaudeUpstream, undefined);
+});
+
+test("a non-allowlisted provider + claude target never gets the ollama marker", () => {
+  const out = resolveExecutionCredentials({
+    ...base,
+    provider: "claude",
+    targetFormat: "claude",
+  }) as Record<string, unknown>;
+  const psd = out.providerSpecificData as Record<string, unknown>;
+  assert.equal(psd._omnirouteOllamaClaudeUpstream, undefined);
+});

@@ -117,6 +117,7 @@ export type ProviderConfig = {
   baseUrl?: string;
   baseUrls?: string[];
   responsesBaseUrl?: string;
+  claudeBaseUrl?: string;
   chatPath?: string;
   clientVersion?: string;
   clientId?: string;

@@ -10,6 +10,7 @@ _Living section — bullets land here as PRs merge into `release/v3.8.47` (paral
 
 ### ✨ New Features
 
+- **feat(ollama):** add a native Claude-format (`/v1/messages`) transport so Claude clients skip the lossy openai bridge. (thanks @thienpvt)
 - **Provider/model param filters**: config-driven parameter denylist/allowlist per provider/model with auto-learn from upstream 400s (#6649 — thanks @ThongAccount, closes #6625)
 
 ### 🐛 Bug Fixes

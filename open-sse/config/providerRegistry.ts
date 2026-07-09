@@ -40,6 +40,9 @@ export function generateLegacyProviders(): Record<string, LegacyProvider> {
     if (entry.responsesBaseUrl) {
       p.responsesBaseUrl = entry.responsesBaseUrl;
     }
+    if (entry.claudeBaseUrl) {
+      p.claudeBaseUrl = entry.claudeBaseUrl;
+    }
     if (entry.requestDefaults) {
       p.requestDefaults = entry.requestDefaults;
     }

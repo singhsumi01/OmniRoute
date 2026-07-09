@@ -87,3 +87,60 @@ test("unmapped provider → alias falls back to the provider id", () => {
   });
   assert.equal(r.alias, "some-unmapped-provider");
 });
+
+// Port of decolua/9router#2475: ollama-cloud exposes a native Claude-format (`/v1/messages`)
+// upstream (registry `claudeBaseUrl`). A Claude-format client should resolve targetFormat="claude"
+// directly instead of the provider's default openai bridge, so the actual request skips the lossy
+// claude->openai->ollama translation. Narrow, single-provider override — see
+// CLAUDE_NATIVE_PASSTHROUGH_PROVIDERS in targetFormat.ts.
+test("ollama-cloud + sourceFormat=claude resolves targetFormat=claude (native passthrough)", () => {
+  // precondition: no static per-model targetFormat override exists for this model, so the
+  // sourceFormat-driven override is the thing actually deciding targetFormat here.
+  assert.ok(!getModelTargetFormat(PROVIDER_ID_TO_ALIAS["ollama-cloud"] || "ollama-cloud", "deepseek-v4-pro"));
+
+  const r = resolveChatCoreTargetFormat({
+    provider: "ollama-cloud",
+    resolvedModel: "deepseek-v4-pro",
+    apiFormat: undefined,
+    customModelTargetFormat: undefined,
+    providerSpecificData: undefined,
+    sourceFormat: FORMATS.CLAUDE,
+  });
+  assert.equal(r.targetFormat, FORMATS.CLAUDE);
+});
+
+test("ollama-cloud + sourceFormat=openai keeps the default openai bridge target", () => {
+  const r = resolveChatCoreTargetFormat({
+    provider: "ollama-cloud",
+    resolvedModel: "deepseek-v4-pro",
+    apiFormat: undefined,
+    customModelTargetFormat: undefined,
+    providerSpecificData: undefined,
+    sourceFormat: FORMATS.OPENAI,
+  });
+  assert.equal(r.targetFormat, getTargetFormat("ollama-cloud", undefined));
+  assert.equal(r.targetFormat, FORMATS.OPENAI);
+});
+
+test("ollama-cloud + no sourceFormat (omitted) is byte-identical to the pre-port behavior", () => {
+  const r = resolveChatCoreTargetFormat({
+    provider: "ollama-cloud",
+    resolvedModel: "deepseek-v4-pro",
+    apiFormat: undefined,
+    customModelTargetFormat: undefined,
+    providerSpecificData: undefined,
+  });
+  assert.equal(r.targetFormat, FORMATS.OPENAI);
+});
+
+test("a non-allowlisted provider is NOT affected by sourceFormat=claude (no generic transport framework)", () => {
+  const r = resolveChatCoreTargetFormat({
+    provider: "openai",
+    resolvedModel: "gpt-4o",
+    apiFormat: undefined,
+    customModelTargetFormat: undefined,
+    providerSpecificData: undefined,
+    sourceFormat: FORMATS.CLAUDE,
+  });
+  assert.equal(r.targetFormat, FORMATS.OPENAI);
+});

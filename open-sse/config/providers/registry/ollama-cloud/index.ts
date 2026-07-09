@@ -6,6 +6,13 @@ export const ollama_cloudProvider: RegistryEntry = {
   format: "openai",
   executor: "default",
   baseUrl: "https://ollama.com/v1/chat/completions",
+  // Ollama Cloud also exposes a native Anthropic-compatible /v1/messages
+  // endpoint. A Claude-format client (sourceFormat="claude") is routed here
+  // instead of through the lossy claude->openai->ollama bridge, preserving
+  // thinking blocks/tool ids/image fidelity (port of decolua/9router#2475).
+  // Auth stays Authorization: Bearer (same as the openai-format endpoint,
+  // per the ollama.com auth domain) — no separate auth scheme needed.
+  claudeBaseUrl: "https://ollama.com/v1/messages",
   modelsUrl: "https://ollama.com/api/tags",
   authType: "apikey",
   authHeader: "bearer",

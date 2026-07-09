@@ -106,6 +106,15 @@ export interface RegistryEntry {
   /** Override base URL used only for API key validation (e.g., opencode-go validates on zen/v1) */
   testKeyBaseUrl?: string;
   responsesBaseUrl?: string;
+  /**
+   * Alternate base URL that speaks the provider's native Claude-format
+   * (`/v1/messages`) upstream API. When set, a Claude-format client
+   * (sourceFormat="claude") is routed here instead of through the lossy
+   * claude→openai bridge, mirroring the `responsesBaseUrl` precedent above
+   * (see DefaultExecutor.buildUrl / resolveChatCoreTargetFormat). Port of
+   * decolua/9router#2475 (ollama-cloud only — no generic transport framework).
+   */
+  claudeBaseUrl?: string;
   urlSuffix?: string;
   urlBuilder?: (base: string, model: string, stream: boolean) => string;
   authType: string;
@@ -173,6 +182,7 @@ export interface LegacyProvider {
   baseUrl?: string;
   baseUrls?: string[];
   responsesBaseUrl?: string;
+  claudeBaseUrl?: string;
   headers?: Record<string, string>;
   requestDefaults?: ProviderRequestDefaults;
   clientId?: string;
