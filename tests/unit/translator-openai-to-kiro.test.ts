@@ -1049,10 +1049,10 @@ test("buildKiroPayload accepts kr/* model ids without the [1m] suffix", () => {
 test("buildKiroPayload strips local Kiro selector suffixes before upstream", () => {
   const body = { messages: [{ role: "user", content: "Hello" }] };
 
-  const result = buildKiroPayload("claude-opus-4.8-thinking-agentic", body, true, {});
+  const result = buildKiroPayload("claude-sonnet-5-thinking-agentic", body, true, {});
   assert.equal(
     result.conversationState.currentMessage.userInputMessage.modelId,
-    "claude-opus-4.8",
+    "claude-sonnet-5",
     "local -thinking/-agentic aliases must not be forwarded to Kiro"
   );
   assert.equal(
