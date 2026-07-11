@@ -1120,7 +1120,8 @@
     "alwaysVisible": "__MISSING__:Always visible",
     "groupSeparatorLabel": "__MISSING__:Separator",
     "discovery": "Descoberta",
-    "discoverySubtitle": "Buscar acesso gratuito em provedores"
+    "discoverySubtitle": "Buscar acesso gratuito em provedores",
+    "chaosConfig": "Chaos Mode"
   },
   "webhooks": {
     "title": "Webhooks",
@@ -4885,7 +4886,8 @@
     "doubaoWebDesc": "__MISSING__:ByteDance AI chat via doubao.com",
     "overrideBaseUrlAdvanced": "Avançado: sobrescrever URL base",
     "overrideBaseUrlHint": "Avançado: aponta este provedor embutido para um endpoint personalizado. Deixe em branco para usar o padrão.",
-    "bulkAddFormatHintCloudflare": "Uma chave por linha. Formato: nome|accountId|apiKey (ID de conta Cloudflare + token de API)."
+    "bulkAddFormatHintCloudflare": "Uma chave por linha. Formato: nome|accountId|apiKey (ID de conta Cloudflare + token de API).",
+    "lmarenaWebCookieHint": "Abra arena.ai, faça login e depois copie o cabeçalho Cookie completo de uma requisição de rede. Inclua arena-auth-prod-v1.0 e arena-auth-prod-v1.1 (e outros fragmentos, se houver), preferencialmente com cf_clearance. Não cole apenas o cookie vazio arena-auth-prod-v1. Opcional: providerSpecificData.recaptchaV3Token se create-evaluation ainda retornar 403."
   },
   "settings": {
     "title": "Configurações",
@@ -6188,7 +6190,37 @@
     "modelLockoutMaxBackoffSteps": "__MISSING__:Max Backoff Steps",
     "modelLockoutMaxBackoffStepsDescription": "__MISSING__:Maximum number of backoff steps before the cooldown stops growing. The Max Cooldown cap is reached first in most configurations, making this a safety ceiling for when Max Cooldown is raised.",
     "disableSessionStickiness": "Desabilitar fixação de sessão",
-    "disableSessionStickinessDesc": "Combos round-robin e aleatórios alternam para uma conexão diferente a cada requisição, em vez de fixar toda a conversa em uma conexão pelo hash da primeira mensagem. Deixe desativado para preservar acertos de cache de prompt em conversas com múltiplos turnos. Sobrescritas por combo têm prioridade."
+    "disableSessionStickinessDesc": "Combos round-robin e aleatórios alternam para uma conexão diferente a cada requisição, em vez de fixar toda a conversa em uma conexão pelo hash da primeira mensagem. Deixe desativado para preservar acertos de cache de prompt em conversas com múltiplos turnos. Sobrescritas por combo têm prioridade.",
+    "accountRoundRobin": "Round Robin",
+    "accountRoundRobinDesc": "Alterna entre contas para distribuir a carga",
+    "addKeyValue": "Adicionar valor da chave",
+    "comboRoundRobin": "Round Robin de Combo",
+    "comboRoundRobinDesc": "Alterna entre os alvos do combo em vez de sempre começar pelo primeiro",
+    "comboStickyLimit": "Limite de Fixação do Combo",
+    "comboStickyLimitDesc": "Chamadas por alvo do combo antes de trocar",
+    "configured": "configurado",
+    "modelOverrideLoadFailed": "Falha ao carregar substituições de modelo",
+    "modelOverrideRemoveFailed": "Falha ao remover substituição de modelo",
+    "modelOverrideRemoved": "Substituição de modelo removida",
+    "modelOverrideSaveFailed": "Falha ao salvar substituição de modelo",
+    "modelOverrideSaved": "Substituição de modelo salva",
+    "modelOverrideValuePlaceholder": "Valor numérico",
+    "modelOverridesDesc": "Substitui as capacidades de provedor/modelo usadas pelo roteamento e pela formatação de requisições. Os alvos usam o mesmo formato provedor/modelo dos combos.",
+    "modelOverridesTitle": "Substituições de Modelo",
+    "noModelOverrides": "Nenhuma substituição configurada para este modelo.",
+    "none": "Nenhum",
+    "providerAccountRoutingDesc": "Substitui a estratégia global de contas para este provedor (paridade com 9router).",
+    "providerAccountRoutingTitle": "Roteamento multi-conta",
+    "providerRoutingInheritGlobal": "Herdar padrão global",
+    "providerRoutingStrategy": "Estratégia de conta",
+    "routingStrategyAccountSummary": "Distribuindo requisições entre contas com {limit} chamadas por conta.",
+    "routingStrategyComboFallbackSummary": " Combos usam a estratégia configurada de cada combo (prioridade/fallback padrão).",
+    "routingStrategyComboSummary": " Combos giram após {limit} chamada(s) por alvo.",
+    "routingStrategyFillFirstSummary": "Usando contas em ordem de prioridade (Fill First).",
+    "routingStrategySubtitle": "Compatível com 9router: round-robin de contas, limites de fixação e rotação de combo",
+    "routingStrategyTitle": "Estratégia de Roteamento",
+    "searchModelOverrideTargets": "Buscar provedor/modelo...",
+    "selectedModel": "Modelo selecionado"
   },
   "contextRtk": {
     "title": "Motor RTK",
@@ -7999,7 +8031,8 @@
     "poolAddLabel": "Adicionar um proxy",
     "poolAddMember": "Adicionar",
     "poolAddFailed": "Falha ao adicionar o proxy ao pool",
-    "poolSelectProxy": "Selecionar um proxy…"
+    "poolSelectProxy": "Selecionar um proxy…",
+    "strategyLatency": "Otimizado por latência"
   },
   "playground": {
     "title": "Title",
@@ -9135,5 +9168,35 @@
     "auth": "Autenticação",
     "feasibility": "Viabilidade",
     "models": "Modelos"
+  },
+  "chaosConfig": {
+    "addProvider": "Adicionar Provedor",
+    "configError": "Falha ao salvar a configuração do Chaos Mode",
+    "configReset": "Restaurar Padrões",
+    "configSaved": "Configuração do Chaos Mode salva com sucesso",
+    "enableChaos": "Ativar Chaos Mode",
+    "enableChaosDesc": "Permitir que chaves de API com o Chaos Mode ativado usem este recurso",
+    "keyPermission": "Acesso ao Chaos Mode",
+    "keyPermissionDesc": "Permitir que esta chave de API use o Chaos Mode (execução paralela multi-modelo)",
+    "loadingProviderModels": "Carregando provedores...",
+    "mode": "Modo Padrão",
+    "modeCollaborative": "Colaborativo",
+    "modeCollaborativeDesc": "Os modelos encadeiam saídas — cada um vê o resultado anterior",
+    "modeParallel": "Paralelo",
+    "modeParallelDesc": "Todos os modelos rodam simultaneamente — resultados mais rápidos",
+    "modelId": "Modelo",
+    "pageSubtitle": "Execute múltiplos modelos de IA em paralelo ou de forma colaborativa na mesma tarefa",
+    "pageTitle": "Chaos Mode",
+    "providerId": "Provedor",
+    "providerOverrides": "Substituições de Provedor",
+    "providerOverridesDesc": "Selecione modelos específicos por provedor para o Chaos Mode",
+    "removeProvider": "Remover",
+    "saveConfig": "Salvar Configuração",
+    "systemPrompt": "Prompt de Sistema (opcional)",
+    "systemPromptDesc": "Instruções personalizadas para todas as instâncias de modelo do Chaos Mode",
+    "testButton": "Testar Chaos Mode",
+    "testTask": "Escreva um poema curto sobre inteligência artificial",
+    "timeout": "Tempo Limite (ms)",
+    "timeoutDesc": "Tempo máximo por chamada de modelo (5000-600000ms)"
   }
 }
