@@ -13,6 +13,7 @@ import Modal from "@/shared/components/Modal";
 import Toggle from "@/shared/components/Toggle";
 import Tooltip from "@/shared/components/Tooltip";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { filterActiveConnections } from "@/shared/utils/connectionStatus";
 import { FieldLabelWithHelp, WeightTotalBar } from "./parts";
 import { ResponseValidationEditor, type ResponseValidationValue } from "./ResponseValidationEditor";
 import ReasoningTokenBufferToggle from "./ReasoningTokenBufferToggle";
@@ -768,7 +769,10 @@ export default function CombosPage() {
 
       if (combosRes.ok) setCombos((combosData.combos || []).filter((c) => !c.isHidden));
       if (providersRes.ok) {
-        const active = (providersData.connections || []).filter(
+        // Exclude connections the user has explicitly disabled (isActive === false)
+        // before applying the test-status filter — a disabled connection can still
+        // carry a stale "active"/"success" testStatus from before it was disabled.
+        const active = filterActiveConnections(providersData.connections || []).filter(
           (c) => c.testStatus === "active" || c.testStatus === "success"
         );
         setActiveProviders(active);
