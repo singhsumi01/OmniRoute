@@ -31,10 +31,14 @@ import {
   sanitizeStreamingChunk,
 } from "../handlers/responseSanitizer.ts";
 import { isFeatureFlagEnabled } from "@/shared/utils/featureFlags";
-import { shouldDropResponsesCommentaryEvent } from "./responsesCommentaryDrop.ts";
+import {
+  shouldDropResponsesCommentaryEvent,
+  createTranslateCommentaryFilter,
+} from "./responsesCommentaryDrop.ts";
 import { buildErrorBody } from "./error.ts";
 import { parseTextualToolCallCandidate, isValidToolCallHeaderPrefix } from "./textualToolCall.ts";
 import { recordToolLatency } from "../services/toolLatencyTracker.ts";
+import { extractToolSchemaMap } from "../translator/response/openai-responses/toolSchemas.ts";
 import {
   generateSessionId,
   markToolFinish,
@@ -150,6 +154,8 @@ type TranslateState = ReturnType<typeof initState> & {
   accumulatedContent?: string;
   /** Accumulated reasoning content (separate from content) */
   accumulatedReasoning?: string;
+  /** #6951 — per-tool JSON Schema (from request `tools[]`), keyed by tool name. */
+  toolSchemas?: Map<string, Record<string, unknown>> | null;
   upstreamError?: {
     status: number;
     type: string;
@@ -684,6 +690,7 @@ export function createSSEStream(options: StreamOptions = {}) {
           suppressThinkClose,
           accumulatedContent: "",
           accumulatedReasoning: "",
+          toolSchemas: extractToolSchemaMap(body),
         }
       : null;
 
@@ -707,6 +714,7 @@ export function createSSEStream(options: StreamOptions = {}) {
   // item id + output_index here and drop every matching follow-up event.
   const passthroughResponsesCommentaryItemIds = new Set<string>();
   const passthroughResponsesCommentaryIndexes = new Set<number>();
+  const dropCommentary = createTranslateCommentaryFilter(targetFormat);
   // #5786 — highest Responses-API `sequence_number` already forwarded on this stream.
   // The Responses API guarantees a strictly increasing sequence_number, so any event at
   // or below this watermark is an upstream reconnect/retry replay and must be dropped —
@@ -1931,6 +1939,8 @@ export function createSSEStream(options: StreamOptions = {}) {
           ) {
             continue;
           }
+
+          if (shouldDropResponsesCommentary && dropCommentary(parsed as JsonRecord)) continue;
 
           providerPayloadCollector.push(parsed);
 
