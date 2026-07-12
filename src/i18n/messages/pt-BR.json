@@ -6224,7 +6224,12 @@
     "routingStrategySubtitle": "Compatível com 9router: round-robin de contas, limites de fixação e rotação de combo",
     "routingStrategyTitle": "Estratégia de Roteamento",
     "searchModelOverrideTargets": "Buscar provedor/modelo...",
-    "selectedModel": "Modelo selecionado"
+    "selectedModel": "Modelo selecionado",
+    "codexAutoPingTitle": "Codex Quota Auto-Ping",
+    "codexAutoPingDesc": "Opt-in per connection: sends a tiny request right after a Codex session window resets so it isn't cold when you need it.",
+    "codexAutoPingWarning": "Consumes a small amount of real Codex quota on every ping. Off by default — enable only for connections you actively rely on.",
+    "codexAutoPingSaveError": "Failed to update Codex Auto-Ping setting",
+    "codexAutoPingToggleAria": "Toggle Codex quota auto-ping for {connection}"
   },
   "contextRtk": {
     "title": "Motor RTK",
