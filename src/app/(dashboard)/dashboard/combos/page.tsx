@@ -769,9 +769,6 @@ export default function CombosPage() {
 
       if (combosRes.ok) setCombos((combosData.combos || []).filter((c) => !c.isHidden));
       if (providersRes.ok) {
-        // Exclude connections the user has explicitly disabled (isActive === false)
-        // before applying the test-status filter — a disabled connection can still
-        // carry a stale "active"/"success" testStatus from before it was disabled.
         const active = filterActiveConnections(providersData.connections || []).filter(
           (c) => c.testStatus === "active" || c.testStatus === "success"
         );
