@@ -1,0 +1,1 @@
+- **Electron (Windows)**: the better-sqlite3 Electron-ABI rebuild now spawns `npx.cmd` through a shell — Node's CVE-2024-27980 hardening made the shell-less spawn fail with `status null` on Windows runners, breaking the v3.8.47 desktop build
