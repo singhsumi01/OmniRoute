@@ -362,6 +362,21 @@ export const IMAGE_PROVIDERS: Record<string, ImageProviderConfig> = {
     models: [{ id: "gen2", name: "Gen 2 Image" }],
     supportedSizes: ["16:9", "9:16", "1:1", "4:3", "3:4"],
   },
+  // #2482: MiniMax already has entries in musicRegistry/audioRegistry/videoRegistry,
+  // but was missing an image provider entirely, so MiniMax image-model requests
+  // fell through the format dispatch below to a 400/unmatched-format response.
+  minimax: {
+    id: "minimax",
+    baseUrl: "https://api.minimax.io/v1/image_generation",
+    authType: "apikey",
+    authHeader: "bearer",
+    format: "minimax-image",
+    models: [
+      { id: "image-01", name: "MiniMax Image-01" },
+      { id: "image-01-live", name: "MiniMax Image-01 Live" },
+    ],
+    supportedSizes: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "1024x1024"],
+  },
   leonardo: {
     id: "leonardo",
     baseUrl: "https://cloud.leonardo.ai/api/rest/v1/generations",
