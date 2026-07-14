@@ -32,6 +32,7 @@ import {
   getNextComboBuilderStage,
   getPreviousComboBuilderStage,
   hasExactModelStepDuplicate,
+  isEligibleActiveConnection,
   isIntelligentBuilderStrategy,
   parseQualifiedModel,
   resolveComboBuilderProviderId,
@@ -768,9 +769,7 @@ export default function CombosPage() {
 
       if (combosRes.ok) setCombos((combosData.combos || []).filter((c) => !c.isHidden));
       if (providersRes.ok) {
-        const active = (providersData.connections || []).filter(
-          (c) => c.testStatus === "active" || c.testStatus === "success"
-        );
+        const active = (providersData.connections || []).filter(isEligibleActiveConnection);
         setActiveProviders(active);
       }
       if (metricsRes.ok) setMetrics(metricsData.metrics || {});
