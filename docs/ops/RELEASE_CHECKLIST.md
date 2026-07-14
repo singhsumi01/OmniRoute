@@ -47,12 +47,12 @@ to AFTER the proof, not before it.
 **Owner flow after the workflow goes green:**
 
 1. `npm stage list omniroute` — find the stage id (also printed in the workflow summary).
-2. Verify the staged bytes (recommended): `npm stage download <id>` and run
-   `node scripts/check/check-pack-boot.mjs` against the downloaded tarball's tree, or
-   install+boot it manually in a temp prefix.
+2. Verify the staged bytes (recommended): `npm stage download <id>`, then install the
+   downloaded tarball into a temp prefix and boot it (`npm run check:pack-boot` automates
+   the same pack→install→boot verdict in CI).
 3. `npm stage approve <id>` — the 2FA prompt IS the publish. `npm stage reject <id>` discards.
-4. Post-publish net: `scripts/release/verify-published.mjs <version>` (clean-container
-   install from the public registry + boot).
+4. Post-publish net: the post-publish verifier (WS1.4 of the v3.8.49 plan) installs the
+   published version from the public registry in a clean container and boots it.
 
 **Emergency fallback:** `workflow_dispatch` with `publish_mode=direct` restores the
 legacy immediate `npm publish` (use only if staging itself misbehaves; record why).
