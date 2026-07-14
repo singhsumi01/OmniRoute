@@ -110,7 +110,10 @@ import { normalizeMimoThinking } from "../services/mimoThinking.ts";
 import { normalizeClaudeAdaptiveThinking } from "../services/claudeAdaptiveThinking.ts";
 import { normalizeClaudeHaikuConstraints } from "../services/claudeHaikuConstraints.ts";
 import { echoModelInObject } from "../services/responseModelEcho.ts";
-import { stripGpt5SamplingWhenReasoning } from "../services/gpt5SamplingGuard.ts";
+import {
+  stripGpt5SamplingWhenReasoning,
+  stripGpt5ReasoningWhenTools,
+} from "../services/gpt5SamplingGuard.ts";
 import { getUnsupportedParams, REGISTRY } from "../config/providerRegistry.ts";
 import { supportsMaxTokens } from "@/lib/modelCapabilities.ts";
 import { normalizeThinkingForModel } from "@/shared/constants/modelSpecs.ts";
@@ -2084,6 +2087,19 @@ export async function handleChatCore({
   // GPT-5.1+ default). A static unsupportedParams list can't express that, so strip sampling
   // conditionally here. The codex Responses path is already covered by the executor allowlist.
   translatedBody = stripGpt5SamplingWhenReasoning(
+    translatedBody,
+    provider,
+    finalModelToUpstream,
+    log
+  );
+
+  // GPT-5.x reasoning models (raw openai Chat Completions) also reject function `tools`
+  // combined with an active `reasoning_effort`: HTTP 400 "Function tools with
+  // reasoning_effort are not supported ... Please use /v1/responses instead." Unlike the
+  // openai-compatible-* MCP/tool_search shape (forceResponsesUpstream.ts), the plain
+  // `openai` provider always stays on /chat/completions, so strip the reasoning fields
+  // here instead of rerouting. Port of 9router#2540.
+  translatedBody = stripGpt5ReasoningWhenTools(
     translatedBody,
     provider,
     finalModelToUpstream,

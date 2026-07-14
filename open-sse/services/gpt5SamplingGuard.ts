@@ -79,3 +79,64 @@ export function stripGpt5SamplingWhenReasoning<T extends Record<string, unknown>
   );
   return next as T;
 }
+
+const REASONING_FIELDS = ["reasoning_effort", "reasoning"] as const;
+
+/**
+ * True when the request carries a non-empty `tools` array holding at least one
+ * function-shaped tool entry (`{type:"function", ...}` or a bare `{name, ...}`
+ * without a `type`, the OpenAI Chat Completions convention).
+ */
+function hasFunctionTools(record: JsonRecord): boolean {
+  if (!Array.isArray(record.tools) || record.tools.length === 0) return false;
+  return record.tools.some((toolValue) => {
+    const tool = asRecord(toolValue);
+    if (!tool) return false;
+    const toolType = typeof tool.type === "string" ? tool.type : "";
+    return toolType === "" || toolType === "function";
+  });
+}
+
+/**
+ * Raw api.openai.com Chat Completions rejects GPT-5.x reasoning models that
+ * carry BOTH function `tools` and an active `reasoning_effort` with HTTP 400:
+ * "Function tools with reasoning_effort are not supported for <model> in
+ * /v1/chat/completions. Please use /v1/responses instead." OmniRoute's
+ * `shouldForceResponsesUpstream` guard only re-routes `openai-compatible-*`
+ * connections carrying MCP/tool_search tool shapes to `/responses` — the
+ * plain `openai` provider always stays on `/chat/completions`, so this
+ * combination still reaches the upstream 400 today. Strip the reasoning
+ * fields instead so the request succeeds on `/chat/completions` (the
+ * dashboard offers no `reasoning_effort:"none"` override, so this cannot be
+ * worked around client-side). Port of 9router#2540.
+ */
+export function stripGpt5ReasoningWhenTools<T extends Record<string, unknown>>(
+  body: T,
+  provider: string | null | undefined,
+  model: string | null | undefined,
+  log?: { warn?: (tag: string, message: string) => void } | null
+): T {
+  if (provider !== "openai") return body;
+  if (typeof model !== "string" || !/^gpt-5/i.test(model)) return body;
+
+  const record = asRecord(body);
+  if (!record) return body;
+  if (!hasFunctionTools(record)) return body;
+  if (!hasActiveReasoning(record, model)) return body;
+
+  const stripped: string[] = [];
+  for (const field of REASONING_FIELDS) {
+    if (Object.hasOwn(record, field)) stripped.push(field);
+  }
+  if (stripped.length === 0) return body;
+
+  const next: JsonRecord = { ...record };
+  for (const field of stripped) delete next[field];
+
+  log?.warn?.(
+    "PARAMS",
+    `Stripped ${stripped.join(", ")} for ${model} (function tools + reasoning_effort ` +
+      `are rejected on /v1/chat/completions; use /v1/responses instead)`
+  );
+  return next as T;
+}
