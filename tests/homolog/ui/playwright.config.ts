@@ -16,8 +16,13 @@ export default defineConfig({
   reporter: [
     ["list"],
     [
+      // outputDir ABSOLUTO: o reporter resolve paths relativos contra o CWD do
+      // processo (não contra o config) — um path relativo escapava do worktree.
       "playwright-ctrf-json-reporter",
-      { outputDir: "../../../homolog-report", outputFile: "ui-ctrf.json" },
+      {
+        outputDir: path.resolve(HERE, "..", "..", "..", "homolog-report"),
+        outputFile: "ui-ctrf.json",
+      },
     ],
   ],
   use: {
