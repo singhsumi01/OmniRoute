@@ -127,6 +127,16 @@ export async function validateResponseQuality(
     // SSE lifecycle state.
     let hasMessageStart = false;
     let hasContentBlock = false;
+    // #1382: hasContentBlock only means "a content_block_* event was observed"
+    // — it does NOT mean the block carried usable content. A content_block_start
+    // for a text/thinking block routinely opens with empty text (real content
+    // arrives via subsequent content_block_delta events); some upstreams
+    // (reported: DeepSeek/GLM via claude→openai translation on tool-heavy
+    // requests) open and close such a block without ever emitting a delta.
+    // hasRealContent tracks whether we've actually seen usable output: a
+    // tool_use/redacted_thinking block start (self-evidently real, even before
+    // any delta), or a delta carrying non-empty text/thinking/tool-input.
+    let hasRealContent = false;
     let hasLifecycleEnd = false;
     let anyContentFound = false;
     let sawAnyBytes = false;
@@ -138,8 +148,9 @@ export async function validateResponseQuality(
      * flags in the closure. The last (potentially incomplete) line is kept in
      * `decodedSoFar` for the next iteration.
      *
-     * Returns true when a content_block_* event is detected — the caller
-     * should stop peeking and treat the stream as non-empty.
+     * Returns true once REAL content (not just an empty content_block_start)
+     * is detected — the caller should stop peeking and treat the stream as
+     * non-empty.
      */
     function parseAccumulatedSse(): boolean {
       const lines = decodedSoFar.split(/\r?\n/);
@@ -181,12 +192,47 @@ export async function validateResponseQuality(
           case "message_start":
             hasMessageStart = true;
             break;
-          case "content_block_start":
-          case "content_block_delta":
+          case "content_block_start": {
+            hasContentBlock = true;
+            const contentBlock = parsed.content_block;
+            const blockType =
+              contentBlock && typeof contentBlock === "object"
+                ? (contentBlock as Record<string, unknown>).type
+                : undefined;
+            // tool_use / redacted_thinking blocks are real signal as soon as
+            // they start — a tool call is meaningful even before its
+            // input_json_delta arrives. text/thinking blocks routinely open
+            // empty; keep peeking for a delta that proves real content.
+            if (blockType === "tool_use" || blockType === "redacted_thinking") {
+              hasRealContent = true;
+              return true;
+            }
+            break;
+          }
+          case "content_block_delta": {
+            hasContentBlock = true;
+            const delta = parsed.delta;
+            if (delta && typeof delta === "object") {
+              const d = delta as Record<string, unknown>;
+              const deltaType = typeof d.type === "string" ? d.type : "";
+              const hasNonEmptyText =
+                (deltaType === "text_delta" || deltaType === "thinking_delta") &&
+                typeof (d.text ?? d.thinking) === "string" &&
+                ((d.text ?? d.thinking) as string).length > 0;
+              // input_json_delta carries tool-call argument fragments — any
+              // fragment (even an empty-string first chunk) is real signal
+              // that a tool_use block is actively streaming arguments.
+              const hasToolInput = deltaType === "input_json_delta";
+              if (hasNonEmptyText || hasToolInput) {
+                hasRealContent = true;
+                return true;
+              }
+            }
+            break;
+          }
           case "content_block_stop":
             hasContentBlock = true;
-            // Signal caller to stop buffering immediately.
-            return true;
+            break;
           case "message_stop":
             hasLifecycleEnd = true;
             break;
@@ -258,11 +304,17 @@ export async function validateResponseQuality(
           if (decodedSoFar.trim()) decodedSoFar += "\n\n";
           parseAccumulatedSse();
 
-          if (hasMessageStart && hasLifecycleEnd && !hasContentBlock) {
-            // Complete Claude lifecycle with zero content blocks → failover.
+          if (hasMessageStart && hasLifecycleEnd && !hasRealContent) {
+            // Complete Claude lifecycle with zero content blocks, or with
+            // content_block_start/stop pairs that never carried real text/
+            // thinking/tool_use content (#1382 — tool-heavy claude→openai
+            // requests against upstreams like DeepSeek/GLM can "complete" a
+            // lifecycle around an empty block) → failover.
             log.warn?.(
               "COMBO",
-              "Streaming Claude response has complete lifecycle but zero content blocks (content_filter?) — marking as invalid for combo failover"
+              hasContentBlock
+                ? "Streaming Claude response has complete lifecycle but its content block(s) carried no usable text/tool_use — marking as invalid for combo failover"
+                : "Streaming Claude response has complete lifecycle but zero content blocks (content_filter?) — marking as invalid for combo failover"
             );
             return { valid: false, reason: "streaming empty content block" };
           }
