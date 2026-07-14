@@ -9,7 +9,10 @@ export default defineConfig({
   testDir: ".",
   timeout: 60_000,
   retries: 1,
-  workers: 4,
+  // Sem fullyParallel, os 98 testes de routes.spec.ts (mesmo arquivo) rodam
+  // SERIALIZADOS num único worker (~10min); com ele, distribuem entre os workers.
+  fullyParallel: true,
+  workers: 8,
   reporter: [
     ["list"],
     [
