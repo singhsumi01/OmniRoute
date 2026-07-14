@@ -193,8 +193,10 @@ jobs:
           set -euo pipefail
           CUR=$(npm --version)
           if ! node -e "const [a,b]='$(npm --version)'.split('.').map(Number); process.exit(a>11||(a===11&&b>=15)?0:1)"; then
-            echo "npm $CUR < 11.15 — installing latest npm for staged publishing"
-            npm install -g npm@latest
+            # Pinned exact version (supply-chain: never float @latest in the publish
+            # job); bump deliberately when a newer npm is required.
+            echo "npm $CUR < 11.15 — installing pinned npm 11.15.0 for staged publishing"
+            npm install -g --ignore-scripts npm@11.15.0
           fi
           npm --version
 
