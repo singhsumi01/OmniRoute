@@ -57,6 +57,17 @@ export function interpretMitmStartupError(stderr: string, port: number): string 
 let serverProcess: ChildProcess | null = null;
 let serverPid: number | null = null;
 
+/**
+ * Test-only seam: install a fake server process (and pid) so stopMitm() can be
+ * exercised without spawning a real MITM child. Not part of the public API —
+ * only intended for unit tests that need to assert stopMitm()'s DNS/kill
+ * ordering (#1809). No-op in production code paths.
+ */
+export function __setServerProcessForTest(proc: ChildProcess | null, pid: number | null): void {
+  serverProcess = proc;
+  serverPid = pid;
+}
+
 // Set while startMitm() is in flight, from the guard check through spawn.
 // Guards a TOCTOU race: the "already running" check above only trips once
 // `serverProcess` is assigned by spawn() — ~130 lines and several awaits
@@ -710,10 +721,51 @@ async function startMitmInternal(
 
 /**
  * Stop MITM proxy
+ *
+ * Ordering is deliberate and load-bearing (#1809 — "connect ECONNREFUSED
+ * 127.0.0.1:443" after stop). DNS entries MUST be removed BEFORE the server
+ * process is killed: if the process dies first, any client whose DNS still
+ * resolves the target host to 127.0.0.1 (from startMitm()'s spoof) but whose
+ * MITM listener is already dead gets ECONNREFUSED against a dead port for the
+ * whole window between the two steps. Removing DNS first closes that window —
+ * once /etc/hosts no longer points at 127.0.0.1, clients fall back to real
+ * resolution regardless of when the listener actually goes away. This mirrors
+ * the DNS-first ordering already used by repairMitm() and handleExitCleanup().
  * @param {string} sudoPassword - Sudo password for DNS cleanup
+ * @param _depsOverride - optional dependency override, used in tests for DI.
  */
-export async function stopMitm(sudoPassword: string): Promise<{ running: false; pid: null }> {
-  // 1. Kill server process (in-memory or from PID file)
+export async function stopMitm(
+  sudoPassword: string,
+  _depsOverride?: {
+    removeDNSEntry?: (sudoPassword: string) => Promise<void>;
+    removeDNSEntries?: (hosts: string[], sudoPassword: string) => Promise<void>;
+    collectManagedHosts?: () => string[];
+  }
+): Promise<{ running: false; pid: null }> {
+  const deps = {
+    removeDNSEntry: _depsOverride?.removeDNSEntry ?? removeDNSEntry,
+    removeDNSEntries: _depsOverride?.removeDNSEntries ?? removeDNSEntries,
+    collectManagedHosts: _depsOverride?.collectManagedHosts ?? collectManagedHosts,
+  };
+
+  // 1. Remove DNS entries FIRST — Antigravity defaults PLUS every agent +
+  //    custom host that startMitm() may have spoofed. removeDNSEntries is
+  //    idempotent, so over-inclusion is safe; under-inclusion leaks
+  //    /etc/hosts lines that hijack resolution machine-wide after stop
+  //    (Gap 8). Doing this before the process kill closes the ECONNREFUSED
+  //    window described above (#1809).
+  log.info("Removing DNS entries...");
+  await deps.removeDNSEntry(sudoPassword);
+  try {
+    const managed = deps.collectManagedHosts();
+    if (managed.length > 0) {
+      await deps.removeDNSEntries(managed, sudoPassword);
+    }
+  } catch (err) {
+    log.error({ err }, "Failed to remove managed DNS entries during stop (continuing)");
+  }
+
+  // 2. Kill server process (in-memory or from PID file)
   const proc = serverProcess;
   if (proc && !proc.killed) {
     log.info("Stopping MITM server...");
@@ -743,21 +795,6 @@ export async function stopMitm(sudoPassword: string): Promise<{ running: false; 
     }
     serverProcess = null;
     serverPid = null;
-  }
-
-  // 2. Remove DNS entries — Antigravity defaults PLUS every agent + custom host
-  //    that startMitm() may have spoofed. removeDNSEntries is idempotent, so
-  //    over-inclusion is safe; under-inclusion leaks /etc/hosts lines that
-  //    hijack resolution machine-wide after stop (Gap 8).
-  log.info("Removing DNS entries...");
-  await removeDNSEntry(sudoPassword);
-  try {
-    const managed = collectManagedHosts();
-    if (managed.length > 0) {
-      await removeDNSEntries(managed, sudoPassword);
-    }
-  } catch (err) {
-    log.error({ err }, "Failed to remove managed DNS entries during stop (continuing)");
   }
 
   // 3. Clean up
